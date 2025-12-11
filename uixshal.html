@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="mn">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Indra Cyber School UI UX</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: Inter, Arial, sans-serif;
+        background: #0f172a;
+        color: #f1f5f9;
+        user-select: none;
+      }
+      .wrap {
+        max-width: 950px;
+        margin: 40px auto;
+        padding: 0 20px;
+      }
+      .card {
+        background: #111827;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      input,
+      select {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 8px;
+        padding: 6px 10px;
+        color: #fff;
+        margin-left: 8px;
+        user-select: text;
+      }
+      select option {
+        color: #000;
+      }
+      button {
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button#submitBtn {
+        background: linear-gradient(180deg, #2dd4bf, #22d3ee);
+        color: #000;
+      }
+      button#resetBtn {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+      .q {
+        padding: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        margin-bottom: 10px;
+      }
+      .choice {
+        display: block;
+        padding: 6px;
+      }
+      .hidden {
+        display: none;
+      }
+      .tag {
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+      }
+      .good {
+        background: #16a34a33;
+        color: #86efac;
+      }
+      .bad {
+        background: #ef444433;
+        color: #fecaca;
+      }
+      .warn {
+        color: #f87171;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h2>🎓 Indra Cyber School — HTML CSS</h2>
+        <p>
+          Нэр болон ангиа заавал бөглөсний дараа шалгалтаа эхлүүлнэ үү.<br />
+          Tab солих, DevTools нээх, эсвэл цонхноос гарах үед шалгалт автоматаар
+          <b>0 оноо</b> болно. Нэг л удаа өгөх боломжтой.
+        </p>
+        <label
+          >Сурагчийн нэр:
+          <input id="studentName" placeholder="Нэрээ бичнэ үү" />
+        </label>
+        <label
+          >Ангийн нэр:
+          <select id="studentClass">
+            <option value="">Сонгох</option>
+            <option value="SW25-1">SW25-1</option>
+            <option value="SW25-2">SW25-2</option>
+            <option value="SW25-3">SW25-3</option>
+          </select>
+        </label>
+        <span style="margin-left: 20px"
+          >⏱️ Цаг: <span id="timer">40:00</span></span
+        >
+      </div>
+
+      <div class="card" id="examArea"></div>
+
+      <div class="card">
+        <button id="submitBtn">✅ Илгээх</button>
+        <button id="resetBtn">🔒 Шинээр эхлэх (идэвхгүй)</button>
+        <div id="status" class="warn" style="margin-top: 10px"></div>
+      </div>
+
+      <div id="resultCard" class="card hidden">
+        <h3>📊 Үр дүн</h3>
+        <p>
+          Сурагч: <strong id="rName"></strong> | Оноо:
+          <strong id="rScore"></strong> / 35 |
+          <span id="rTag" class="tag"></span>
+        </p>
+        <table
+          id="rTable"
+          border="1"
+          cellpadding="6"
+          cellspacing="0"
+          style="width: 100%; border-collapse: collapse"
+        ></table>
+      </div>
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+      import {
+        getFirestore,
+        collection,
+        addDoc,
+      } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCvqZQnwrt1JaySxAune-vL8yZuMWez_Xc",
+        authDomain: "shalgalt-54c0e.firebaseapp.com",
+        projectId: "shalgalt-54c0e",
+        storageBucket: "shalgalt-54c0e.firebasestorage.app",
+        messagingSenderId: "953807867175",
+        appId: "1:953807867175:web:e9e523824dd1b734782d02",
+        measurementId: "G-N5CC7SF02B",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      const EXAM_KEY = "indra_dijkstra_exam_done";
+      const ALLOWED_CLASSES = ["SW25-1", "SW25-2", "SW25-3"];
+
+      const questions = [
+        {
+          q: "Вэб хэрхэн ажилладаг вэ?",
+          c: [
+            "Клиент хүсэлт илгээж сервер хариу өгдөг",
+            "Сервер хүсэлт илгээж клиент хариулдаг",
+            "Интернетгүй ажилладаг",
+            "Зөвхөн локал орчинд ажилладаг",
+          ],
+          a: 0,
+        },
+        {
+          q: "Server гэж юу вэ?",
+          c: [
+            "Зураг хадгалдаг төхөөрөмж",
+            "Хүсэлт хүлээн авч боловсруулдаг компьютер",
+            "Принтерийн драйвер",
+            "Интернетийн хурд хэмжигч",
+          ],
+          a: 1,
+        },
+        {
+          q: "Интернет гэж юу вэ?",
+          c: [
+            "Дэлхийн том сүлжээ",
+            "Дотоод локал сүлжээ",
+            "Зөвхөн чат аппликейшн",
+            "Камерийн систем",
+          ],
+          a: 0,
+        },
+        {
+          q: "Client гэж юу вэ?",
+          c: [
+            "Серверийн нэг төрөл",
+            "Вэб рүү хүсэлт илгээдэг төхөөрөмж",
+            "Дата баазын нэр",
+            "Гар утасны апп",
+          ],
+          a: 1,
+        },
+        {
+          q: "HTTP гэж юу вэ?",
+          c: [
+            "Вэбийн өгөгдөл дамжуулах протокол",
+            "Зураг шахах хэрэгсэл",
+            "Видео тоглуулагч",
+            "Серверийн IP солигч",
+          ],
+          a: 0,
+        },
+        {
+          q: "Webpage гэж юу вэ?",
+          c: [
+            "Гар утасны апп",
+            "HTML-ээр бүтээгдсэн нэг хуудас",
+            "Компьютерийн сервер",
+            "Домэйн нэр",
+          ],
+          a: 1,
+        },
+        {
+          q: "Web browser гэж юу вэ?",
+          c: [
+            "Вэб үзэх програм",
+            "Дата бааз",
+            "Серверийн төрөл",
+            "Код бичигч IDE",
+          ],
+          a: 0,
+        },
+        {
+          q: "URL гэж юу вэ?",
+          c: ["Вэбийн хаяг", "Зураг файл", "Текст файл", "CSS файл"],
+          a: 0,
+        },
+        {
+          q: "Status Code 200 юуг илэрхийлдэг вэ?",
+          c: [
+            "Алдаа гарсан",
+            "Амжилттай",
+            "Сервер унтарсан",
+            "Хуудас олдсонгүй",
+          ],
+          a: 1,
+        },
+        {
+          q: "API гэж юу вэ?",
+          c: [
+            "Зураг боловсруулах хэрэгсэл",
+            "Програм хооронд мэдээлэл солилцох интерфейс",
+            "Домэйн нэр",
+            "Харилцаа холбооны төхөөрөмж",
+          ],
+          a: 1,
+        },
+        {
+          q: "Интернет протокол аль вэ?",
+          c: ["JPG", "PNG", "HTTP", "DOCX"],
+          a: 2,
+        },
+        {
+          q: "Hosting гэж юу вэ?",
+          c: [
+            "Вэб файлуудыг сервер дээр байршуулах үйлчилгээ",
+            "Домэйн нэр",
+            "DNS тохиргоо",
+            "Код бичих орчин",
+          ],
+          a: 0,
+        },
+        {
+          q: "IDE гэж юу вэ?",
+          c: [
+            "Зураг засварлагч",
+            "Код бичих хөгжүүлэлтийн орчин",
+            "Фонт суулгагч",
+            "Видео тоглуулагч",
+          ],
+          a: 1,
+        },
+        {
+          q: "Программ хангамж гэж юу вэ?",
+          c: [
+            "Техникийн хэрэгсэл",
+            "Компьютер дээр ажилладаг програмуудын цуглуулга",
+            "Гар утасны камер",
+            "WiFi төхөөрөмж",
+          ],
+          a: 1,
+        },
+        {
+          q: "Front-end ямар хэсгийг хариуцдаг вэ?",
+          c: [
+            "Серверийн логик",
+            "Хэрэглэгчид харагдах UI",
+            "Өгөгдлийн бааз",
+            "IP хаягийн удирдлага",
+          ],
+          a: 1,
+        },
+        {
+          q: "Back-end ямар үүрэгтэй вэ?",
+          c: [
+            "Дизайн хийх",
+            "Сервер, API, өгөгдлийн логик",
+            "Зураг засах",
+            "Фонтыг удирдах",
+          ],
+          a: 1,
+        },
+        {
+          q: "Developer Tools юунд ашиглагддаг вэ?",
+          c: [
+            "Хуудас шалгах, алдаа олох",
+            "Зураг хайх",
+            "Вирус устгах",
+            "Апп суулгах",
+          ],
+          a: 0,
+        },
+        {
+          q: "Framework гэж юу вэ?",
+          c: [
+            "Өнгөний код",
+            "Хөгжүүлэлтийн бүтцийг удирддаг хүрээ",
+            "Фонт",
+            "Видео формат",
+          ],
+          a: 1,
+        },
+        {
+          q: "Library гэж юу вэ?",
+          c: [
+            "Зураг файл",
+            "Бэлэн функцуудын цуглуулга",
+            "Өгөгдлийн бааз",
+            "Видео тоглуулагч",
+          ],
+          a: 1,
+        },
+        {
+          q: "Framework ба Library-ийн гол ялгаа?",
+          c: [
+            "Framework урсгалыг удирдана, Library-г та өөрөө дуудаж ашиглана",
+            "Ямар ч ялгаа байхгүй",
+            "Library зөвхөн CSS-т ашиглагдана",
+            "Framework зөвхөн зурагт ашиглагдана",
+          ],
+          a: 0,
+        },
+        {
+          q: "HTML гэж юу вэ?",
+          c: [
+            "Програмчлалын хэл",
+            "Вэб бүтэц тодорхойлох тэмдэглэгээ",
+            "Серверийн хэл",
+            "Зураг боловсруулах систем",
+          ],
+          a: 1,
+        },
+        {
+          q: "HTML tag гэж юу вэ?",
+          c: ["CSS class", "HTML элемент", "JS функц", "Серверийн порт"],
+          a: 1,
+        },
+        {
+          q: "Head хэсэгт юу байрладаг вэ?",
+          c: ["Харагдах текст", "Metadata, title, links", "Зураг", "Видео"],
+          a: 1,
+        },
+        {
+          q: "Вэб бүтцийн ямар элемент нь хуудасны логик утгыг илэрхийлдэг semantic элемент вэ?",
+          c: [
+            "Header буюу толгой хэсэг",
+            "Box-model",
+            "CSS selector",
+            "Color palette",
+          ],
+          a: 0,
+        },
+        {
+          q: "<a> tag юунд ашиглагддаг вэ?",
+          c: ["Зураг оруулах", "Линк үүсгэх", "Хүснэгт хийх", "CSS холбох"],
+          a: 1,
+        },
+        {
+          q: "<img> tag-д заавал юу байх ёстой вэ?",
+          c: ["id", "src", "class", "href"],
+          a: 1,
+        },
+        {
+          q: "Table бүтцийн зөв дараалал?",
+          c: [
+            "table → tr → td",
+            "table → td → tr",
+            "td → tr → table",
+            "tr → td → table",
+          ],
+          a: 0,
+        },
+        {
+          q: "Form юунд ашиглагддаг вэ?",
+          c: [
+            "Зураг засах",
+            "Хэрэглэгчээс мэдээлэл авах",
+            "CSS өнгө солих",
+            "Видео тоглуулах",
+          ],
+          a: 1,
+        },
+        {
+          q: "CSS гэж юу вэ?",
+          c: [
+            "Вэбийн загвар, өнгө тодорхойлох stylesheet",
+            "Зураг оруулах хэрэгсэл",
+            "Вирус устгагч",
+            "Серверийн протокол",
+          ],
+          a: 0,
+        },
+        {
+          q: "Inline CSS аль вэ?",
+          c: [
+            "p style='color:red'",
+            "link rel='stylesheet'",
+            "link rel='stylesheet'",
+            "CSS файл",
+          ],
+          a: 0,
+        },
+        {
+          q: "Box-model-ийн бүрэлдэхүүн аль вэ?",
+          c: [
+            "margin, padding, border, content",
+            "header, footer, main",
+            "src, alt, href",
+            "div, span, p",
+          ],
+          a: 0,
+        },
+        {
+          q: "Вэб бүтцийн ямар элемент нь хуудасны логик утгыг илэрхийлдэг semantic элемент вэ?",
+          c: [
+            "Header буюу толгой хэсэг",
+            "Box-model",
+            "CSS selector",
+            "Color palette",
+          ],
+          a: 0,
+        },
+        {
+          q: "Flexbox юунд ашиглагддаг вэ?",
+          c: [
+            "Элементүүдийг уян хатан байрлуулах",
+            "Видео тоглуулах",
+            "Зураг шахах",
+            "Server deploy",
+          ],
+          a: 0,
+        },
+        {
+          q: "justify-content ямар үүрэгтэй вэ?",
+          c: [
+            "Өнгө солих",
+            "Flex гол тэнхлэгийн дагуух байрлал",
+            "Border нэмэх",
+            "Animation эхлүүлэх",
+          ],
+          a: 1,
+        },
+        {
+          q: "CSS Grid гэж юу вэ?",
+          c: [
+            "Дуу тоглуулагч",
+            "2D layout систем",
+            "Өнгөний палитр",
+            "Зураг хөрвүүлэгч",
+          ],
+          a: 1,
+        },
+        {
+          q: "Hover эффект гэж юу вэ?",
+          c: [
+            "Дэлгэцийн хэмжээ тохируулах",
+            "Хулгана дээр очих үед загвар өөрчлөх",
+            "Зураг шахах",
+            "Фонт суулгах",
+          ],
+          a: 1,
+        },
+        {
+          q: "overflow: hidden юу хийдэг вэ?",
+          c: [
+            "Илүү гарсан хэсгийг нуух",
+            "Зураг томруулах",
+            "Фонт нэмэх",
+            "Border арилгах",
+          ],
+          a: 0,
+        },
+        {
+          q: "Responsive design гэж юу вэ?",
+          c: [
+            "Зөвхөн desktop-д ажилладаг дизайн",
+            "Дэлгэцийн хэмжээ бүрт тааруулж өөрчлөгдөх дизайн",
+            "Hover эффект",
+            "Server-side загвар",
+          ],
+          a: 1,
+        },
+        {
+          q: "Вэбийн үндсэн файлын бүтэц аль вэ?",
+          c: [
+            "index.html, style.css, assets/",
+            "only index.html",
+            "PNG зураг",
+            "server.js",
+          ],
+          a: 0,
+        },
+        {
+          q: "UI/UX-д хамгийн чухал зүйл?",
+          c: [
+            "Өнгө, spacing, хэрэглэгчийн урсгал",
+            "Серверийн IP",
+            "DNS хаяг",
+            "Keyboard-ийн өнгө",
+          ],
+          a: 0,
+        },
+      ];
+
+      const examArea = document.getElementById("examArea");
+      questions.forEach((it, i) => {
+        const d = document.createElement("div");
+        d.className = "q";
+        d.innerHTML =
+          `<b>${i + 1}. ${it.q}</b><br>` +
+          it.c
+            .map(
+              (t, j) =>
+                `<label class="choice"><input type="radio" name="q${i}" value="${j}"> ${String.fromCharCode(
+                  65 + j
+                )}) ${t}</label>`
+            )
+            .join("");
+        examArea.appendChild(d);
+      });
+
+      let secondsLeft = 2400,
+        timerId = null;
+      function tick() {
+        const m = String(Math.floor(secondsLeft / 60)).padStart(2, "0");
+        const s = String(secondsLeft % 60).padStart(2, "0");
+        document.getElementById("timer").textContent = `${m}:${s}`;
+        if (secondsLeft <= 0) {
+          failExam("Цаг дууссан");
+          return;
+        }
+        secondsLeft--;
+        timerId = setTimeout(tick, 1000);
+      }
+      tick();
+
+      function collect() {
+        let score = 0;
+        const ans = [];
+        questions.forEach((it, i) => {
+          const ch = document.querySelector(`input[name=q${i}]:checked`);
+          const v = ch ? Number(ch.value) : null;
+          ans.push(v);
+          if (v === it.a) score++;
+        });
+        return { score, ans };
+      }
+
+      function validateInfo() {
+        const n = document.getElementById("studentName").value.trim();
+        const c = document.getElementById("studentClass").value.trim();
+        if (!n) {
+          alert("⚠️ Нэрээ бичнэ үү!");
+          return false;
+        }
+        if (!ALLOWED_CLASSES.includes(c)) {
+          alert("⚠️ Зөв ангийг сонгоно уу!");
+          return false;
+        }
+        return true;
+      }
+
+      async function submitExamToFirestore(n, c, fs, reason) {
+        try {
+          const docRef = await addDoc(collection(db, "exams"), {
+            name: n,
+            class: c,
+            score: fs,
+            reason: reason || "OK",
+            timestamp: new Date(),
+          });
+          console.log("Шалгалтын үр дүн Firestore-д хадгалагдлаа:", docRef.id);
+        } catch (e) {
+          console.error("Алдаа гарлаа:", e);
+        }
+      }
+
+      function submitExam(force = false, reason = "") {
+        if (!force && !validateInfo()) return;
+        if (timerId) clearTimeout(timerId);
+
+        const n = document.getElementById("studentName").value.trim() || "—";
+        const c = document.getElementById("studentClass").value.trim() || "—";
+        const { score, ans } = collect();
+        const fs = force ? 0 : score;
+
+        // 🧱 Нэг удаа өгөх хамгаалалт
+        localStorage.setItem(EXAM_KEY, "done");
+
+        document.getElementById("rName").textContent = n + " (" + c + ")";
+        document.getElementById("rScore").textContent = fs;
+
+        const tag = document.getElementById("rTag");
+        if (fs >= 16) {
+          tag.textContent = "Онц";
+          tag.className = "tag good";
+        } else if (fs >= 12) {
+          tag.textContent = "Сайн";
+          tag.className = "tag good";
+        } else if (fs >= 8) {
+          tag.textContent = "Дунд";
+          tag.className = "tag";
+        } else {
+          tag.textContent = "Муу";
+          tag.className = "tag bad";
+        }
+
+        document.getElementById("rTable").innerHTML = table(ans); // table функцийн дотор хадгалагдсан хариултууд
+        document.getElementById("resultCard").classList.remove("hidden");
+        document.getElementById("status").textContent = force
+          ? `Шалгалт хүчингүй (${reason})`
+          : "Шалгалт илгээгдлээ.";
+        document.getElementById("submitBtn").disabled = true;
+        document.getElementById("submitBtn").style.opacity = "0.6";
+
+        submitExamToFirestore(n, c, fs, reason);
+      }
+
+      document.getElementById("submitBtn").onclick = () => submitExam();
+      document.getElementById("resetBtn").onclick = () =>
+        alert("⛔ Шалгалт нэг л удаа өгөх боломжтой!");
+
+      function table(ans) {
+        let r =
+          "<tr><th>#</th><th>Сонголт</th><th>Зөв</th><th>Статус</th></tr>";
+        questions.forEach((it, i) => {
+          const v = ans[i];
+          const ok = v === it.a;
+          r += `<tr><td>${i + 1}</td><td>${
+            v != null ? String.fromCharCode(65 + v) : "-"
+          }</td><td>${String.fromCharCode(65 + it.a)}</td><td>${
+            ok
+              ? '<span class="tag" style="background:#16a34a33;color:#86efac">Зөв</span>'
+              : '<span class="tag" style="background:#ef444433;color:#fecaca">Буруу</span>'
+          }</td></tr>`;
+        });
+        return r;
+      }
+
+      let examFailed = false;
+
+      function failExam(reason) {
+        if (examFailed) return; // ⛔ Дахиж ажиллуулахгүй
+        examFailed = true;
+
+        try {
+          clearTimeout(timerId);
+        } catch {}
+
+        localStorage.setItem("indra_dijkstra_exam_done", "done");
+
+        // UI устгах
+        examArea.innerHTML = `
+    <p style="color:#f87171;font-size:18px">
+      🚨 Шалгалт хүчингүй боллоо — ${reason}
+    </p>
+  `;
+
+        const n = document.getElementById("studentName").value.trim() || "—";
+        const c = document.getElementById("studentClass").value.trim() || "—";
+
+        // Зөвхөн нэг удаа Firestore руу илгээх
+        submitExamToFirestore(n, c, 0, reason);
+
+        document.getElementById("submitBtn").disabled = true;
+
+        // Үр дүн харуулах
+        document.getElementById("rName").textContent = `${n} (${c})`;
+        document.getElementById("rScore").textContent = 0;
+        document.getElementById("rTag").textContent = "Хүчингүй";
+        document.getElementById("rTag").className = "tag bad";
+
+        document.getElementById("resultCard").classList.remove("hidden");
+      }
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) failExam("Tab солисон эсвэл цонх далдлагдсан");
+      });
+
+      window.addEventListener("blur", () => {
+        setTimeout(() => {
+          if (!document.hasFocus()) failExam("Цонхоос гарсан");
+        }, 300);
+      });
+      // 🛑 Шалгалт өмнө өгөгдсөн эсвэл хүчингүй болсон бол UI-г блоклох
+    </script>
+  </body>
+</html>
